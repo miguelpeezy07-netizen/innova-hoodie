@@ -112,7 +112,7 @@ header{background:var(--azul);padding:0 20px;display:flex;align-items:center;jus
 .hl{color:var(--nrj)}
 /* CHARTS PANEL */
 .cp{display:flex;flex-direction:column;gap:12px}
-.cc{background:#fff;border-radius:var(--r);padding:16px;box-shadow:var(--sh)}
+.cpanel{background:#fff;border-radius:var(--r);padding:16px;box-shadow:var(--sh)}
 .ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .cn{font-size:11px;font-weight:700;color:var(--txt)}
 .cl{display:flex;gap:10px}
@@ -251,11 +251,11 @@ footer{background:var(--azul);color:rgba(255,255,255,.35);text-align:center;padd
     <div class="cr" style="margin-top:5px"><div class="crl">Punto de equilibrio</div><div class="crv"><span id="crPE" class="hl">—</span> unidades mínimas</div></div>
   </div>
   <div class="cp">
-    <div class="cc">
+    <div class="cpanel">
       <div class="ch"><span class="cn">Curva de Demanda vs Precio</span><div class="cl"><div class="cli"><div class="cld" style="background:#0057B8"></div>Unidades</div><div class="cli"><div class="cld" style="background:#F97316"></div>Precio actual</div></div></div>
       <div style="position:relative;height:112px"><canvas id="dcv" height="112"></canvas></div>
     </div>
-    <div class="cc">
+    <div class="cpanel">
       <div class="ch"><span class="cn">Facturación por Nivel Escolar</span><div class="cl"><div class="cli"><div class="cld" style="background:#3BAD1E"></div>Primaria</div><div class="cli"><div class="cld" style="background:#F97316"></div>Secundaria</div><div class="cli"><div class="cld" style="background:#0057B8"></div>Bachillerato</div></div></div>
       <div class="bchart" id="bch" style="padding:0 6px"></div>
     </div>
@@ -286,7 +286,7 @@ function sv(v,el){document.querySelectorAll('.htab').forEach(t=>t.classList.remo
 function calc(){
   const p=parseFloat(document.getElementById('pIn').value)||40;
   const dp=parseInt(document.getElementById('dS').value)/100;
-  const el=Math.max(0.1,Math.min(1.3,1+(-1.2)*((p-40)/40)));
+  const el=Math.min(2.5,Math.pow(40/p,1.2));
   const res=SEGS.map(s=>{const pct=Math.min(0.99,s.int*(dp/0.52)*el);return{...s,pct,u:Math.round(s.uni*pct),f:Math.round(s.uni*pct)*p,m:p>0?Math.round((p-COSTO)/p*100):0};});
   const tU=res.reduce((a,r)=>a+r.u,0),tF=res.reduce((a,r)=>a+r.f,0);
   const mg=p>0?Math.round((p-COSTO)/p*100):0;
@@ -297,13 +297,13 @@ function calc(){
   g('dTp').textContent=Math.round(tU/3000*100)+'%';g('dTu').textContent=tU.toLocaleString();g('dTf').textContent='$'+tF.toLocaleString();g('dTm').textContent=mg+'%';
   g('kF').textContent='$'+tF.toLocaleString();g('kU').textContent=tU.toLocaleString();g('kM').textContent=mg+'%';
   g('crU').textContent=tU.toLocaleString();g('crUt').textContent=ut.toLocaleString();g('crPE').textContent=pe;
-  drawC(p);drawB(res);
+  drawC(p,dp);drawB(res);
 }
-function drawC(pa){
+function drawC(pa,dp){
   const cv=document.getElementById('dcv');const W=cv.parentElement.offsetWidth||480;cv.width=W;cv.height=112;
   const ctx=cv.getContext('2d');ctx.clearRect(0,0,W,112);
   const ps=[],us=[];
-  for(let p=20;p<=80;p+=2){const e=Math.max(0.1,Math.min(1.3,1+(-1.2)*((p-40)/40)));us.push(Math.round(SEGS.reduce((a,s)=>a+s.uni*s.int*e,0)));ps.push(p);}
+  for(let p=20;p<=80;p+=2){const e=Math.min(2.5,Math.pow(40/p,1.2));us.push(SEGS.reduce((a,s)=>a+Math.round(s.uni*Math.min(0.99,s.int*(dp/0.52)*e)),0));ps.push(p);}
   const mx=Math.max(...us),mn=Math.min(...us),r=mx-mn||1;
   const pL=38,pR=12,pT=10,pB=24,cW=W-pL-pR,cH=112-pT-pB;
   for(let i=0;i<=4;i++){const y=pT+cH*(i/4);ctx.strokeStyle='#E2E8F0';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(pL+cW,y);ctx.stroke();ctx.fillStyle='#94A3B8';ctx.font='8px Space Mono,monospace';ctx.textAlign='right';ctx.fillText(Math.round(mx-(mx-mn)*(i/4)),pL-3,y+3);}
@@ -312,7 +312,7 @@ function drawC(pa){
   ctx.lineTo(pL+cW,pT+cH);ctx.lineTo(pL,pT+cH);ctx.closePath();ctx.fillStyle=gr;ctx.fill();
   ctx.beginPath();ctx.strokeStyle='#0057B8';ctx.lineWidth=2.2;ctx.lineJoin='round';
   ps.forEach((p,i)=>{const x=pL+(p-20)/60*cW,y=pT+cH-((us[i]-mn)/r)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();
-  const px=pL+(pa-20)/60*cW,ea=Math.max(0.1,Math.min(1.3,1+(-1.2)*((pa-40)/40))),ua=Math.round(SEGS.reduce((a,s)=>a+s.uni*s.int*ea,0)),py=pT+cH-((ua-mn)/r)*cH;
+  const px=pL+(pa-20)/60*cW,ea=Math.min(2.5,Math.pow(40/pa,1.2)),ua=SEGS.reduce((a,s)=>a+Math.round(s.uni*Math.min(0.99,s.int*(dp/0.52)*ea)),0),py=pT+cH-((ua-mn)/r)*cH;
   ctx.setLineDash([3,3]);ctx.strokeStyle='#F97316';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(px,pT);ctx.lineTo(px,pT+cH);ctx.stroke();ctx.setLineDash([]);
   ctx.beginPath();ctx.arc(px,py,4.5,0,Math.PI*2);ctx.fillStyle='#F97316';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
   ctx.fillStyle='#F97316';ctx.font='bold 8px Montserrat,sans-serif';ctx.textAlign='center';ctx.fillText('$'+pa,px,pT-2);
@@ -338,7 +338,7 @@ function genQR(){
 }
 document.getElementById('pIn').addEventListener('input',calc);
 document.getElementById('dS').addEventListener('input',calc);
-window.addEventListener('load',()=>{calc();animB();animG();genQR();window.addEventListener('resize',()=>drawC(parseFloat(document.getElementById('pIn').value)||40));});
+window.addEventListener('load',()=>{calc();animB();animG();genQR();window.addEventListener('resize',()=>drawC(parseFloat(document.getElementById('pIn').value)||40,parseInt(document.getElementById('dS').value)/100));});
 </script>
 </body>
 </html>
